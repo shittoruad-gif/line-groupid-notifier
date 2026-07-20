@@ -55,6 +55,9 @@ async function describeGroup(groupId) {
 
 async function handleEvent(ev) {
   const src = ev.source || {};
+  if (src.type === 'group' && (ev.type === 'join' || ev.type === 'message')) {
+    console.log('EVENT', JSON.stringify({ type: ev.type, groupId: src.groupId }));
+  }
   if (ev.type === 'join' && src.type === 'group') {
     const name = await describeGroup(src.groupId);
     await pushOwner(
