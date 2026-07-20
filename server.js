@@ -6,7 +6,25 @@ const http = require('http');
 const LINE_TOKEN = process.env.LINE_TOKEN;
 const OWNER_ID = process.env.OWNER_ID;
 const PATH_TOKEN = process.env.PATH_TOKEN;
+const FORWARD_URL = process.env.FORWARD_URL; // 既存の受信先(contract-onboarding)へ全イベントを中継
 const PORT = process.env.PORT || 3000;
+
+async function forward(rawBody, signature) {
+  if (!FORWARD_URL) return;
+  try {
+    const res = await fetch(FORWARD_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-line-signature': signature || '',
+      },
+      body: rawBody,
+    });
+    if (!res.ok) console.error('forward error', res.status, await res.text());
+  } catch (e) {
+    console.error('forward failed', e.message);
+  }
+}
 
 async function lineApi(path, method, body) {
   const res = await fetch('https://api.line.me' + path, {
@@ -66,6 +84,7 @@ http
     req.on('end', async () => {
       res.writeHead(200);
       res.end('OK');
+      forward(body, req.headers['x-line-signature']);
       try {
         const events = (JSON.parse(body).events || []);
         for (const ev of events) await handleEvent(ev);
